@@ -1,0 +1,662 @@
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Soft SIP - WebRTC</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div
+        class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700 relative overflow-hidden">
+        <!-- Subtle background glow -->
+        <div
+            class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-indigo-500/10 blur-[50px] pointer-events-none">
+        </div>
+
+        <div class="flex justify-between items-center mb-1 relative">
+            <h2
+                class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Soft SIP
+            </h2>
+
+            <div class="flex items-center gap-2">
+                <button onclick="openSettings()" class="text-slate-400 hover:text-white transition-colors"
+                    title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+                <button onclick="openCallLogs()" class="text-slate-400 hover:text-white transition-colors ml-3"
+                    title="Call Logs">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="connectionInfo" class="text-sm font-medium text-slate-500 mb-6 flex items-center gap-1.5 hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                class="w-4 h-4 text-emerald-500">
+                <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                    clip-rule="evenodd" />
+            </svg>
+            <span id="activeExtension" class="text-slate-300 font-semibold tracking-wide"></span>
+            <span class="text-slate-600">@</span>
+            <span id="activeDomain" class="text-slate-400"></span>
+        </div>
+
+        <div class="mb-5 relative">
+            <label for="destination" class="block text-sm font-medium text-slate-400 mb-1">Destination</label>
+            <div class="relative">
+                <input id="destination" placeholder="e.g. 1002"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-4 pr-10 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder-slate-600 text-center text-xl tracking-wider font-semibold" />
+                <button onclick="clearDestination()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dialpad -->
+        <div class="grid grid-cols-3 gap-3 mb-6 px-4">
+            <button onclick="pressKey('1')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50">1</button>
+            <button onclick="pressKey('2')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>2</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">abc</span></button>
+            <button onclick="pressKey('3')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>3</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">def</span></button>
+            <button onclick="pressKey('4')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>4</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">ghi</span></button>
+            <button onclick="pressKey('5')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>5</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">jkl</span></button>
+            <button onclick="pressKey('6')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>6</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">mno</span></button>
+            <button onclick="pressKey('7')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>7</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">pqrs</span></button>
+            <button onclick="pressKey('8')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>8</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">tuv</span></button>
+            <button onclick="pressKey('9')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight"><span>9</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal uppercase">wxyz</span></button>
+            <button onclick="pressKey('*')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50">*</button>
+            <button id="btn-zero"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50 flex flex-col items-center leading-tight select-none touch-manipulation"
+                oncontextmenu="return false;"><span>0</span><span
+                    class="text-[0.6rem] text-slate-400 font-normal">+</span></button>
+            <button onclick="pressKey('#')"
+                class="bg-slate-700/50 hover:bg-slate-600/80 text-white rounded-xl py-3 text-xl font-medium transition-all hover:scale-105 active:scale-95 border border-slate-600/50">#</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button id="registerBtn" onclick="register()"
+                class="hidden col-span-2 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-medium transition-colors border border-slate-600">
+                Register Client
+            </button>
+            <button id="callBtn" onclick="makeCall()"
+                class="col-span-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-medium transition-colors shadow-lg shadow-emerald-500/20">
+                Call
+            </button>
+            <button id="hangupBtn" onclick="hangup()"
+                class="hidden col-span-2 bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-lg font-medium transition-colors shadow-lg shadow-rose-500/20">
+                Hangup
+            </button>
+        </div>
+
+        <div class="flex items-center justify-center space-x-2 bg-slate-900/50 py-3 rounded-lg border border-slate-800">
+            <div id="statusIndicator" class="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+            <div id="status" class="text-sm font-medium text-slate-400 tracking-wide uppercase">Not connected</div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <p class="text-[10px] sm:text-xs text-slate-500 uppercase tracking-widest font-medium">Developed by <a
+                    href="https://frolax.agency" target="_blank"
+                    class="text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">Frolax</a></p>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div
+            class="bg-slate-800 p-8 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl transform transition-all">
+            <h3 class="text-xl font-bold mb-6 text-white tracking-tight">Configuration</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="wssUrl"
+                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">WSS URL</label>
+                    <input id="wssUrl" placeholder="wss://...:7443"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label for="sipDomain"
+                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">SIP
+                        Domain</label>
+                    <input id="sipDomain" placeholder="e.g. 124pbx.softcents.com"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label for="username"
+                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Extension</label>
+                    <input id="username" placeholder="e.g. 1001"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label for="password"
+                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+                    <input id="password" type="password" placeholder="Extension Password"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+            </div>
+
+            <div class="flex space-x-3 mt-8">
+                <button onclick="closeSettings()"
+                    class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium transition-colors text-sm">Cancel</button>
+                <button onclick="saveSettings()"
+                    class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/20 text-sm">Save
+                    Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Modal -->
+    <div id="incomingCallModal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div
+            class="bg-slate-800 p-8 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl transform transition-all text-center">
+            <div class="mb-6">
+                <div
+                    class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]">
+                    <svg class="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white tracking-tight">Incoming Call</h3>
+                <p id="callerIdDisplay" class="text-slate-400 mt-2 text-sm">Someone is calling you...</p>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="rejectCall()"
+                    class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-rose-500/20 text-sm">Decline</button>
+                <button onclick="acceptCall()"
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-emerald-500/20 text-sm">Accept</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Logs Modal -->
+    <div id="callLogsModal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div
+            class="bg-slate-800 p-6 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl transform transition-all h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white tracking-tight">Call Logs</h3>
+                <button onclick="closeCallLogs()" class="text-slate-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto w-full flex-grow border border-slate-700 rounded-lg bg-slate-900">
+                <table class="w-full text-left text-sm text-slate-400">
+                    <thead class="text-xs text-slate-300 uppercase bg-slate-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Type</th>
+                            <th scope="col" class="px-6 py-3">Number/Destination</th>
+                            <th scope="col" class="px-6 py-3">Duration</th>
+                            <th scope="col" class="px-6 py-3">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="callLogsTableBody">
+                        <!-- Logs will be inserted here dynamically -->
+                    </tbody>
+                </table>
+                <div id="emptyLogsMsg" class="hidden text-center text-slate-500 mt-10 p-4">
+                    No call logs found.
+                </div>
+            </div>
+            <div class="flex justify-between mt-4">
+                <button onclick="clearCallLogs()"
+                    class="bg-rose-900/40 text-rose-400 hover:bg-rose-900/60 hover:text-rose-300 px-4 py-2 rounded-lg font-medium transition-colors text-sm border border-rose-800">Clear
+                    Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="remoteAudio" autoplay></audio>
+
+    <!-- SIP.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sip.js/0.20.0/sip.min.js" referrerpolicy="no-referrer"></script>
+
+    <script>
+        let simpleUser;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("wssUrl").value = localStorage.getItem("sip_wssUrl") || "wss://124pbx.softcents.com:7443";
+            document.getElementById("sipDomain").value = localStorage.getItem("sip_domain") || "124pbx.softcents.com";
+            document.getElementById("username").value = localStorage.getItem("sip_username") || "";
+            document.getElementById("password").value = localStorage.getItem("sip_password") || "";
+
+            // Auto register if credentials exist
+            if (localStorage.getItem("sip_username") && localStorage.getItem("sip_password")) {
+                register();
+            } else {
+                document.getElementById("registerBtn").classList.remove("hidden");
+            }
+
+            updateConnectionInfoHeader();
+
+            // Add long-press to 0 button for +
+            const btnZero = document.getElementById("btn-zero");
+            if (btnZero) {
+                let zeroTimer;
+                let zeroLongPressed = false;
+
+                btnZero.addEventListener("pointerdown", () => {
+                    zeroLongPressed = false;
+                    zeroTimer = setTimeout(() => {
+                        zeroLongPressed = true;
+                        pressKey('+');
+                    }, 500); // 500ms for long press
+                });
+
+                btnZero.addEventListener("pointerup", () => {
+                    clearTimeout(zeroTimer);
+                    if (!zeroLongPressed) {
+                        pressKey('0');
+                    }
+                });
+
+                btnZero.addEventListener("pointercancel", () => {
+                    clearTimeout(zeroTimer);
+                });
+
+                btnZero.addEventListener("pointerleave", () => {
+                    clearTimeout(zeroTimer);
+                });
+            }
+        });
+
+        function openSettings() {
+            document.getElementById("settingsModal").classList.remove("hidden");
+            document.getElementById("settingsModal").classList.add("flex");
+        }
+
+        function closeSettings() {
+            document.getElementById("settingsModal").classList.add("hidden");
+            document.getElementById("settingsModal").classList.remove("flex");
+        }
+
+        function saveSettings() {
+            localStorage.setItem("sip_wssUrl", document.getElementById("wssUrl").value);
+            localStorage.setItem("sip_domain", document.getElementById("sipDomain").value);
+            localStorage.setItem("sip_username", document.getElementById("username").value);
+            localStorage.setItem("sip_password", document.getElementById("password").value);
+            closeSettings();
+            updateConnectionInfoHeader();
+            register(); // Re-register on save settings
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return "0s";
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${h}h ${m}m ${s}s`;
+            if (m > 0) return `${m}m ${s}s`;
+            return `${s}s`;
+        }
+
+        // Call Logs Logic
+        function getCallLogs() {
+            const logs = localStorage.getItem("sip_callLogs");
+            return logs ? JSON.parse(logs) : [];
+        }
+
+        function addCallLog(type, destination, durationSecs = 0) {
+            const logs = getCallLogs();
+            logs.unshift({
+                type: type, // 'outgoing', 'incoming', 'missed', 'declined'
+                destination: destination || 'Unknown',
+                duration: durationSecs,
+                timestamp: new Date().toLocaleString()
+            });
+            if (logs.length > 50) logs.pop(); // Keep only last 50
+            localStorage.setItem("sip_callLogs", JSON.stringify(logs));
+            renderCallLogs();
+        }
+
+        function clearCallLogs() {
+            if (confirm("Are you sure you want to clear all call history?")) {
+                localStorage.setItem("sip_callLogs", JSON.stringify([]));
+                renderCallLogs();
+            }
+        }
+
+        function openCallLogs() {
+            document.getElementById("callLogsModal").classList.remove("hidden");
+            document.getElementById("callLogsModal").classList.add("flex");
+            renderCallLogs();
+        }
+
+        function closeCallLogs() {
+            document.getElementById("callLogsModal").classList.add("hidden");
+            document.getElementById("callLogsModal").classList.remove("flex");
+        }
+
+        function renderCallLogs() {
+            const logs = getCallLogs();
+            const tbody = document.getElementById("callLogsTableBody");
+            const emptyMsg = document.getElementById("emptyLogsMsg");
+
+            tbody.innerHTML = "";
+
+            if (logs.length === 0) {
+                emptyMsg.classList.remove("hidden");
+            } else {
+                emptyMsg.classList.add("hidden");
+                logs.forEach(log => {
+                    const tr = document.createElement("tr");
+                    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50";
+
+                    let typeIcon = '';
+                    if (log.type === 'outgoing') {
+                        typeIcon = `<span class="bg-emerald-900/50 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded border border-emerald-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>Outbound</span>`;
+                    } else if (log.type === 'incoming') {
+                        typeIcon = `<span class="bg-blue-900/50 text-blue-400 text-xs font-medium px-2.5 py-1 rounded border border-blue-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>Inbound</span>`;
+                    } else if (log.type === 'missed' || log.type === 'declined') {
+                        typeIcon = `<span class="bg-rose-900/50 text-rose-400 text-xs font-medium px-2.5 py-1 rounded border border-rose-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>Missed</span>`;
+                    }
+
+                    tr.innerHTML = `
+                  <td class="px-6 py-4 font-medium whitespace-nowrap">${typeIcon}</td>
+                  <td class="px-6 py-4 text-slate-200 font-mono tracking-wider">${log.destination}</td>
+                  <td class="px-6 py-4 text-sm text-slate-300 font-mono">${log.duration ? formatDuration(log.duration) : '0s'}</td>
+                  <td class="px-6 py-4 text-xs">${log.timestamp}</td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function setStatus(text, state = 'default') {
+            const statusEl = document.getElementById("status");
+            const indicatorEl = document.getElementById("statusIndicator");
+
+            statusEl.innerText = text;
+
+            // Reset classes
+            indicatorEl.className = "w-2.5 h-2.5 rounded-full";
+            statusEl.className = "text-sm font-medium tracking-wide uppercase";
+
+            if (state === 'success') {
+                indicatorEl.classList.add("bg-emerald-500", "shadow-[0_0_8px_rgba(16,185,129,0.8)]");
+                statusEl.classList.add("text-emerald-400");
+            } else if (state === 'error') {
+                indicatorEl.classList.add("bg-rose-500", "shadow-[0_0_8px_rgba(244,63,94,0.8)]");
+                statusEl.classList.add("text-rose-400");
+            } else if (state === 'warning') {
+                indicatorEl.classList.add("bg-amber-500", "animate-pulse");
+                statusEl.classList.add("text-amber-400");
+            } else {
+                indicatorEl.classList.add("bg-slate-500");
+                statusEl.classList.add("text-slate-400");
+            }
+        }
+
+        let incomingCallPending = false;
+        let currentIncomingRemoteIdentity = 'Unknown';
+        let callActiveInfo = null; // { type: 'outgoing'|'incoming'|'missed'|'declined', remote: string, startTime: number | null }
+
+        async function register() {
+            const username = localStorage.getItem("sip_username");
+            const password = localStorage.getItem("sip_password");
+            const server = localStorage.getItem("sip_wssUrl") || "wss://124pbx.softcents.com:7443";
+            const domain = localStorage.getItem("sip_domain") || "124pbx.softcents.com";
+            const registerBtn = document.getElementById("registerBtn");
+
+            if (!username || !password || !server || !domain) {
+                alert("Please configure settings first");
+                registerBtn.classList.remove("hidden");
+                openSettings();
+                return;
+            }
+
+            setStatus("Registering...", "warning");
+            registerBtn.classList.add("hidden");
+
+            const options = {
+                delegate: {
+                    onCallHangup: () => {
+                        setStatus("Call ended", "default");
+
+                        let durationObj = 0;
+                        if (callActiveInfo) {
+                            if (callActiveInfo.startTime) {
+                                durationObj = Math.round((new Date() - callActiveInfo.startTime) / 1000);
+                            }
+                            addCallLog(callActiveInfo.type, callActiveInfo.remote, durationObj);
+                            callActiveInfo = null;
+                        }
+
+                        if (incomingCallPending) {
+                            incomingCallPending = false;
+                        }
+
+                        hideIncomingCallModal();
+                        showCallButton();
+                    },
+                    onCallAnswered: () => {
+                        setStatus("In Call", "success");
+                        if (callActiveInfo) {
+                            callActiveInfo.startTime = new Date();
+                        }
+                        if (incomingCallPending) {
+                            incomingCallPending = false;
+                        }
+                        hideIncomingCallModal();
+                        showHangupButton();
+                    },
+                    onCallReceived: () => {
+                        if (simpleUser.session) {
+                            // Try to strip sip: prefix to display just remote extension
+                            const remoteUriObj = simpleUser.session.remoteIdentity.uri;
+                            currentIncomingRemoteIdentity = remoteUriObj ? remoteUriObj.user : 'Unknown';
+                        }
+
+                        // We set initially as missed, if answered it'll become incoming, if rejected it becomes declined
+                        callActiveInfo = { type: 'missed', remote: currentIncomingRemoteIdentity, startTime: null };
+
+                        document.getElementById("callerIdDisplay").innerText = `Call from: ${currentIncomingRemoteIdentity}`;
+                        setStatus("Ringing...", "warning");
+                        incomingCallPending = true;
+                        showIncomingCallModal();
+                    }
+                },
+                aor: `sip:${username}@${domain}`,
+                userAgentOptions: {
+                    authorizationUsername: username,
+                    authorizationPassword: password
+                },
+                media: {
+                    constraints: { audio: true, video: false },
+                    remote: {
+                        audio: document.getElementById("remoteAudio")
+                    }
+                }
+            };
+
+            simpleUser = new SIP.Web.SimpleUser(server, options);
+
+            try {
+                await simpleUser.connect();
+                await simpleUser.register();
+                setStatus("Registered", "success");
+            } catch (error) {
+                console.error(error);
+                setStatus("Registration failed", "error");
+                registerBtn.classList.remove("hidden");
+                alert("Registration failed. Please check your credentials and connection.");
+            }
+        }
+
+        function showCallButton() {
+            document.getElementById("callBtn").classList.remove("hidden");
+            document.getElementById("hangupBtn").classList.add("hidden");
+        }
+
+        function showHangupButton() {
+            document.getElementById("callBtn").classList.add("hidden");
+            document.getElementById("hangupBtn").classList.remove("hidden");
+            isInCall = true;
+        }
+
+        function updateConnectionInfoHeader() {
+            const username = localStorage.getItem("sip_username");
+            const domain = localStorage.getItem("sip_domain");
+            const infoContainer = document.getElementById("connectionInfo");
+
+            if (username && domain) {
+                document.getElementById("activeExtension").innerText = username;
+                document.getElementById("activeDomain").innerText = domain;
+                infoContainer.classList.remove("hidden");
+            } else {
+                infoContainer.classList.add("hidden");
+            }
+        }
+
+        let isInCall = false;
+
+        async function pressKey(key) {
+            if (isInCall && simpleUser) {
+                try {
+                    await simpleUser.sendDTMF(key);
+                } catch (e) {
+                    console.error("Failed to send DTMF", e);
+                }
+            } else {
+                const input = document.getElementById("destination");
+                input.value += key;
+            }
+        }
+
+        function clearDestination() {
+            document.getElementById("destination").value = '';
+        }
+
+        async function makeCall() {
+            const destination = document.getElementById("destination").value;
+            const domain = localStorage.getItem("sip_domain") || "124pbx.softcents.com";
+
+            if (!destination) {
+                alert("Enter destination extension");
+                return;
+            }
+
+            if (!simpleUser) {
+                alert("Please register first");
+                return;
+            }
+
+            try {
+                callActiveInfo = { type: 'outgoing', remote: destination, startTime: null };
+                await simpleUser.call(`sip:${destination}@${domain}`);
+                setStatus("Calling...", "warning");
+                showHangupButton();
+            } catch (error) {
+                console.error(error);
+                setStatus("Call failed", "error");
+                showCallButton();
+                // Handled in catch block logic
+                callActiveInfo = null;
+            }
+        }
+
+        function showIncomingCallModal() {
+            document.getElementById("incomingCallModal").classList.remove("hidden");
+            document.getElementById("incomingCallModal").classList.add("flex");
+        }
+
+        function hideIncomingCallModal() {
+            document.getElementById("incomingCallModal").classList.add("hidden");
+            document.getElementById("incomingCallModal").classList.remove("flex");
+        }
+
+        async function acceptCall() {
+            if (!simpleUser) return;
+            hideIncomingCallModal();
+            try {
+                if (callActiveInfo) callActiveInfo.type = 'incoming';
+                await simpleUser.answer();
+                setStatus("In Call", "success");
+                showHangupButton();
+            } catch (error) {
+                console.error(error);
+                setStatus("Call failed", "error");
+                showCallButton();
+                if (incomingCallPending) {
+                    incomingCallPending = false;
+                }
+            }
+        }
+
+        async function rejectCall() {
+            if (!simpleUser) return;
+            hideIncomingCallModal();
+            try {
+                if (callActiveInfo) callActiveInfo.type = 'declined';
+                await simpleUser.decline();
+                setStatus("Call ended", "default");
+                showCallButton();
+                isInCall = false;
+                if (incomingCallPending) {
+                    incomingCallPending = false;
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function hangup() {
+            if (!simpleUser) return;
+            try {
+                await simpleUser.hangup();
+                setStatus("Call ended", "default");
+                showCallButton();
+                isInCall = false;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+
+</html>

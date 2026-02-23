@@ -335,29 +335,75 @@
             return `${s}s`;
         }
 
-        // Call Logs Logic
-        function getCallLogs() {
-            const logs = localStorage.getItem("sip_callLogs");
-            return logs ? JSON.parse(logs) : [];
-        }
+        // Database Initialization
+        let db;
+        const dbName = "SoftSipDB";
+        const dbVersion = 1;
 
-        function addCallLog(type, destination, durationSecs = 0) {
-            const logs = getCallLogs();
-            logs.unshift({
+        const request = indexedDB.open(dbName, dbVersion);
+
+        request.onerror = (event) => {
+            console.error("IndexedDB error:", event.target.error);
+        };
+
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            const objectStore = db.createObjectStore("call_logs", { keyPath: "id", autoIncrement: true });
+            objectStore.createIndex("timestamp", "timestamp", { unique: false });
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            renderCallLogs(); // Render on load once DB is ready
+
+            // Temporary migration step: Check if old localStorage logs exist and clear them
+            if (localStorage.getItem("sip_callLogs")) {
+                localStorage.removeItem("sip_callLogs");
+                console.log("Cleared old localStorage logs.");
+            }
+        };
+
+        function addCallLog(type, destination, durationSecs = 0, audioBlob = null) {
+            if (!db) return;
+            const transaction = db.transaction(["call_logs"], "readwrite");
+            const objectStore = transaction.objectStore("call_logs");
+
+            const logEntry = {
                 type: type, // 'outgoing', 'incoming', 'missed', 'declined'
                 destination: destination || 'Unknown',
                 duration: durationSecs,
-                timestamp: new Date().toLocaleString()
-            });
-            if (logs.length > 50) logs.pop(); // Keep only last 50
-            localStorage.setItem("sip_callLogs", JSON.stringify(logs));
-            renderCallLogs();
+                timestamp: new Date().toISOString(), // Use ISO for easier sorting later if needed, display locale separately
+                displayTime: new Date().toLocaleString(),
+                audio: audioBlob // Blob | null
+            };
+
+            const addRequest = objectStore.add(logEntry);
+
+            addRequest.onsuccess = () => {
+                // Keep only top 50 roughly
+                const countRequest = objectStore.count();
+                countRequest.onsuccess = () => {
+                    if (countRequest.result > 50) {
+                        const cursorReq = objectStore.openCursor();
+                        cursorReq.onsuccess = e => {
+                            const cursor = e.target.result;
+                            if (cursor) {
+                                objectStore.delete(cursor.primaryKey);
+                            }
+                        }
+                    }
+                }
+                renderCallLogs();
+            };
         }
 
         function clearCallLogs() {
             if (confirm("Are you sure you want to clear all call history?")) {
-                localStorage.setItem("sip_callLogs", JSON.stringify([]));
-                renderCallLogs();
+                if (!db) return;
+                const transaction = db.transaction(["call_logs"], "readwrite");
+                const objectStore = transaction.objectStore("call_logs");
+                const clearReq = objectStore.clear();
+                clearReq.onsuccess = () => renderCallLogs();
             }
         }
 
@@ -373,38 +419,61 @@
         }
 
         function renderCallLogs() {
-            const logs = getCallLogs();
+            if (!db) return;
             const tbody = document.getElementById("callLogsTableBody");
             const emptyMsg = document.getElementById("emptyLogsMsg");
 
-            tbody.innerHTML = "";
+            const transaction = db.transaction(["call_logs"], "readonly");
+            const objectStore = transaction.objectStore("call_logs");
 
-            if (logs.length === 0) {
-                emptyMsg.classList.remove("hidden");
-            } else {
-                emptyMsg.classList.add("hidden");
-                logs.forEach(log => {
-                    const tr = document.createElement("tr");
-                    tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50";
+            // Open a reverse cursor to get newest items first
+            const logs = [];
+            objectStore.openCursor(null, 'prev').onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    logs.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    // Finished fetching
+                    tbody.innerHTML = "";
 
-                    let typeIcon = '';
-                    if (log.type === 'outgoing') {
-                        typeIcon = `<span class="bg-emerald-900/50 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded border border-emerald-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>Outbound</span>`;
-                    } else if (log.type === 'incoming') {
-                        typeIcon = `<span class="bg-blue-900/50 text-blue-400 text-xs font-medium px-2.5 py-1 rounded border border-blue-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>Inbound</span>`;
-                    } else if (log.type === 'missed' || log.type === 'declined') {
-                        typeIcon = `<span class="bg-rose-900/50 text-rose-400 text-xs font-medium px-2.5 py-1 rounded border border-rose-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>Missed</span>`;
+                    if (logs.length === 0) {
+                        emptyMsg.classList.remove("hidden");
+                    } else {
+                        emptyMsg.classList.add("hidden");
+                        logs.forEach(log => {
+                            const tr = document.createElement("tr");
+                            tr.className = "border-b border-slate-700/50 hover:bg-slate-800/50";
+
+                            let typeIcon = '';
+                            if (log.type === 'outgoing') {
+                                typeIcon = `<span class="bg-emerald-900/50 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded border border-emerald-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>Outbound</span>`;
+                            } else if (log.type === 'incoming') {
+                                typeIcon = `<span class="bg-blue-900/50 text-blue-400 text-xs font-medium px-2.5 py-1 rounded border border-blue-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>Inbound</span>`;
+                            } else if (log.type === 'missed' || log.type === 'declined') {
+                                typeIcon = `<span class="bg-rose-900/50 text-rose-400 text-xs font-medium px-2.5 py-1 rounded border border-rose-800 inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>Missed</span>`;
+                            }
+
+                            let audioPlayer = '';
+                            if (log.audio) {
+                                const audioUrl = URL.createObjectURL(log.audio);
+                                audioPlayer = `<audio controls class="h-8 max-w-[200px]" src="${audioUrl}"></audio>`;
+                            }
+
+                            tr.innerHTML = `
+                            <td class="px-6 py-4 font-medium whitespace-nowrap">${typeIcon}</td>
+                            <td class="px-6 py-4">
+                                <span class="text-slate-200 font-mono tracking-wider block">${log.destination}</span>
+                                ${audioPlayer ? `<div class="mt-2 text-xs">${audioPlayer}</div>` : ''}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-300 font-mono">${log.duration ? formatDuration(log.duration) : '0s'}</td>
+                            <td class="px-6 py-4 text-xs">${log.displayTime}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
                     }
-
-                    tr.innerHTML = `
-                  <td class="px-6 py-4 font-medium whitespace-nowrap">${typeIcon}</td>
-                  <td class="px-6 py-4 text-slate-200 font-mono tracking-wider">${log.destination}</td>
-                  <td class="px-6 py-4 text-sm text-slate-300 font-mono">${log.duration ? formatDuration(log.duration) : '0s'}</td>
-                  <td class="px-6 py-4 text-xs">${log.timestamp}</td>
-                `;
-                    tbody.appendChild(tr);
-                });
-            }
+                }
+            };
         }
 
         function setStatus(text, state = 'default') {
@@ -436,6 +505,81 @@
         let currentIncomingRemoteIdentity = 'Unknown';
         let callActiveInfo = null; // { type: 'outgoing'|'incoming'|'missed'|'declined', remote: string, startTime: number | null }
 
+        // Recording Variables
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let mixAudioContext = null;
+
+        function startRecordingSession() {
+            if (!simpleUser || !simpleUser.session) return;
+
+            try {
+                // Initialize Web Audio API components
+                mixAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const mixedDest = mixAudioContext.createMediaStreamDestination();
+
+                // Get Local Stream (Microphone)
+                const sender = simpleUser.session.sessionDescriptionHandler.peerConnection.getSenders()[0];
+                if (sender && sender.track) {
+                    const localStream = new MediaStream([sender.track]);
+                    const localSource = mixAudioContext.createMediaStreamSource(localStream);
+                    localSource.connect(mixedDest);
+                }
+
+                // Get Remote Stream
+                const receiver = simpleUser.session.sessionDescriptionHandler.peerConnection.getReceivers()[0];
+                if (receiver && receiver.track) {
+                    const remoteStream = new MediaStream([receiver.track]);
+                    const remoteSource = mixAudioContext.createMediaStreamSource(remoteStream);
+                    remoteSource.connect(mixedDest);
+                }
+
+                // Start Recording the mixed destination
+                audioChunks = [];
+                // Specify webm if supported, usually standard inside Chrome/JS for media recording
+                let options = { mimeType: 'audio/webm;codecs=opus' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'audio/webm' }; // Fallback
+                }
+
+                mediaRecorder = new MediaRecorder(mixedDest.stream, options);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.start();
+                console.log("Call recording started...");
+
+            } catch (error) {
+                console.error("Failed to start recording:", error);
+            }
+        }
+
+        function stopRecordingSession() {
+            return new Promise((resolve) => {
+                if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                    resolve(null);
+                    return;
+                }
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // Cleanup Context
+                    if (mixAudioContext) {
+                        mixAudioContext.close();
+                        mixAudioContext = null;
+                    }
+                    console.log("Call recording compiled: ", audioBlob.size, " bytes");
+                    resolve(audioBlob);
+                };
+
+                mediaRecorder.stop();
+            });
+        }
+
         async function register() {
             const username = localStorage.getItem("sip_username");
             const password = localStorage.getItem("sip_password");
@@ -455,15 +599,22 @@
 
             const options = {
                 delegate: {
-                    onCallHangup: () => {
+                    onCallHangup: async () => {
                         setStatus("Call ended", "default");
+
+                        let finalAudioBlob = null;
+
+                        // Stop recording and await the blob compilation
+                        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                            finalAudioBlob = await stopRecordingSession();
+                        }
 
                         let durationObj = 0;
                         if (callActiveInfo) {
                             if (callActiveInfo.startTime) {
                                 durationObj = Math.round((new Date() - callActiveInfo.startTime) / 1000);
                             }
-                            addCallLog(callActiveInfo.type, callActiveInfo.remote, durationObj);
+                            addCallLog(callActiveInfo.type, callActiveInfo.remote, durationObj, finalAudioBlob);
                             callActiveInfo = null;
                         }
 
@@ -482,6 +633,12 @@
                         if (incomingCallPending) {
                             incomingCallPending = false;
                         }
+
+                        // Delay slightly to ensure remote stream tracks have attached
+                        setTimeout(() => {
+                            startRecordingSession();
+                        }, 500);
+
                         hideIncomingCallModal();
                         showHangupButton();
                     },
